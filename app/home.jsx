@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import {
-  SafeAreaView,
   View,
   ScrollView,
   Image,
   Text,
   TouchableOpacity,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import TopBar from "../components/TopBar";
+import BottomNavBar from "../components/BottomNavBar";
+
 
 /* 🔹 Journal Card Component */
 const JournalCard = ({ title, subtitle, img }) => (
@@ -91,6 +94,7 @@ export default () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      <TopBar />
       <ScrollView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
         <View style={{ backgroundColor: "#FFFFFF" }}>
 
@@ -165,6 +169,7 @@ export default () => {
 
         </View>
       </ScrollView>
+      <BottomNavBar />
     </SafeAreaView>
   );
 };
