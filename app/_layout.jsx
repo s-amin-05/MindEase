@@ -1,5 +1,7 @@
+// This is the full, corrected code for app/_layout.jsx
+
 import React, { useContext, useEffect } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Slot, useRouter, useSegments } from 'expo-router'; // Import Stack
 import { AuthProvider, AuthContext } from '../context/AuthContext';
 import { Text } from 'react-native';
 
@@ -10,8 +12,7 @@ const InitialLayout = () => {
 
   useEffect(() => {
     if (loading) return;
-    if (segments.length === 0) return;
-
+    
     const inAuthGroup = segments[0] === '(auth)';
 
     if (user && inAuthGroup) {
@@ -24,8 +25,15 @@ const InitialLayout = () => {
   if (loading) {
     return <Text>Loading...</Text>; // Or a proper loading spinner
   }
+  return <Slot/>;
 
-  return <Slot />;
+//   // ✅ THE FIX IS HERE: We replace <Slot /> with the main <Stack /> navigator
+//   return (
+//     <Stack>
+//       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+//       <Stack.Screen name="Journal" options={{ headerShown: false }} />
+//     </Stack>
+//   );
 };
 
 const RootLayout = () => {
