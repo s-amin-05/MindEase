@@ -52,7 +52,7 @@ const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const signup = async (name, email, password) => {
+  const signup = async ( email, password) => {
     try {
       // Replace with your actual backend API endpoint
       const response = await fetch(`${BASE_URL}/api/users/`, {
@@ -60,7 +60,7 @@ const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
       if (response.ok) {
