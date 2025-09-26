@@ -15,10 +15,9 @@ const InitialLayout = () => {
     
     const inAuthGroup = segments[0] === '(auth)';
 
-    // This logic stays the same. It correctly redirects the user.
-    if (user && !inAuthGroup) {
-      router.replace('/Journal');
-    } else if (!user) {
+    if (user && inAuthGroup) {
+      router.replace('/home');
+    } else if (!user && !inAuthGroup) {
       router.replace('/(auth)/login');
     }
   }, [user, loading, segments]);
