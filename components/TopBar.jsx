@@ -10,6 +10,7 @@ const { width, height } = Dimensions.get('window');
 const menuItems = [
   { name: 'Home', icon: 'home-outline', route: '/home' },
   { name: 'Mood Report', icon: 'stats-chart-outline', route: '/moodanalysis' },
+  { name: 'Journal', icon: 'journal', route: '/Journal' },
   { name: 'Settings', icon: 'settings-outline', route: '/profile' },
   { name: 'About MindEase', icon: 'information-circle-outline', route: '/about' },
 ];
