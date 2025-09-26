@@ -15,9 +15,9 @@ const menuItems = [
   { name: 'About MindEase', icon: 'information-circle-outline', route: '/about' },
 ];
 
+// The 'onProfilePress' prop is no longer needed, so I've removed it.
 const TopBar = ({ 
     title = "MindEase", 
-    onProfilePress // Keeping this prop for external handling
 }) => {
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -38,10 +38,9 @@ const TopBar = ({
       <View
         style={styles.topBarContainer}
       >
-        {/* Left: Menu Icon - Toggles the menu state */}
+        {/* Left: Menu Icon */}
         <TouchableOpacity onPress={toggleMenu}>
           <Ionicons 
-            // Optional: change icon to 'close' when menu is open
             name={isMenuOpen ? "close" : "menu"} 
             size={32} 
             color="#111616" 
@@ -53,8 +52,8 @@ const TopBar = ({
           {title}
         </Text>
 
-        {/* Right: Profile Icon - Uses the passed prop or default alert */}
-        <TouchableOpacity onPress={onProfilePress || (() => alert("Profile pressed!"))}>
+        {/* Right: Profile Icon - Now directly navigates to the profile page */}
+        <TouchableOpacity onPress={() => router.push('/profile')}> {/* ✅ THE FIX IS HERE */}
           <Ionicons 
             name="person-circle-outline" 
             size={32} 
@@ -72,7 +71,6 @@ const TopBar = ({
             
             <View style={styles.menuHeader}>
               <Text style={styles.menuTitle}>MindEase Menu</Text>
-              {/* Close button inside the drawer */}
               <TouchableOpacity onPress={toggleMenu}>
                 <Ionicons name="close" size={30} color="#111616" />
               </TouchableOpacity>
@@ -112,7 +110,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
     elevation: 2, 
-    // zIndex is important to ensure the TopBar is below the menu overlay
     zIndex: 10, 
   },
   titleText: {
@@ -131,10 +128,10 @@ const styles = StyleSheet.create({
     width: width,
     height: height,
     flexDirection: 'row',
-    zIndex: 999, // Ensure menu is on top of everything
+    zIndex: 999,
   },
   menuDrawer: {
-    width: width * 0.75, // 75% of screen width
+    width: width * 0.75,
     height: '100%',
     backgroundColor: '#FFFFFF',
     padding: 20,
@@ -146,7 +143,7 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   menuBackdrop: {
-    flex: 1, // Takes up the rest of the space (25% of the screen)
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   menuHeader: {
