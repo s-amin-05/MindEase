@@ -1,5 +1,8 @@
+import { router } from "expo-router";
 import React from "react";
-import { View, TouchableOpacity, Image, Text, StyleSheet, Dimensions } from "react-native";
+import { View, TouchableOpacity, Text, StyleSheet, Dimensions } from "react-native";
+// Import the necessary icons from Expo's package
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 
@@ -9,19 +12,21 @@ const BottomNavBar = () => {
       {/* Left and Right Buttons */}
       <View style={styles.sideButtons}>
         {/* Home */}
-        <TouchableOpacity style={styles.sideButton} onPress={() => alert("Home Pressed!")}>
-          <Image
-            source={{ uri: "https://i.imgur.com/1tMFzp8.png" }}
-            style={styles.icon}
+        <TouchableOpacity style={styles.sideButton} onPress={() => router.replace('/home')}>
+          <Ionicons
+            name="home-outline" // Icon for Home
+            size={28}
+            color="#111616" // Match label color
           />
           <Text style={styles.label}>Home</Text>
         </TouchableOpacity>
 
         {/* Mood Report */}
-        <TouchableOpacity style={styles.sideButton} onPress={() => alert("Mood Report Pressed!")}>
-          <Image
-            source={{ uri: "https://i.imgur.com/1tMFzp8.png" }}
-            style={styles.icon}
+        <TouchableOpacity style={styles.sideButton} onPress={() => router.replace('/moodanalysis')}>
+          <MaterialCommunityIcons
+            name="chart-line-variant" // Icon for reporting/charts
+            size={28}
+            color="#111616" // Match label color
           />
           <Text style={styles.label}>Mood Report</Text>
         </TouchableOpacity>
@@ -32,9 +37,10 @@ const BottomNavBar = () => {
         style={styles.chatBotButton}
         onPress={() => alert("ChatBot Pressed!")}
       >
-        <Image
-          source={{ uri: "https://i.imgur.com/1tMFzp8.png" }}
-          style={{ width: 36, height: 36 }}
+        <Ionicons
+          name="chatbubble-ellipses-outline" // Icon for Chat/Bot
+          size={36} 
+          color="#111616" 
         />
       </TouchableOpacity>
     </View>
@@ -93,4 +99,3 @@ const styles = StyleSheet.create({
 });
 
 export default BottomNavBar;
- 
