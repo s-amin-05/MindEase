@@ -1,6 +1,4 @@
-// This is the full, corrected code for app/Journal/index.jsx
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,38 +10,46 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import TopBar from '../../../components/TopBar';
 
-// --- Global Colors ---
+// --- Service and Context Imports ---
+import { fetchJournalEntries, createJournalEntry } from '../../../services/journalService';
+import { useAuth } from '../../../context/AuthContext';
+
+// --- Global Colors & Mock Data ---
 const primaryColor = '#6200EE';
 const accentColor = '#03DAC6';
 
-// --- Mock Data ---
 const initialJournalData = [
   {
     _id: '4',
     title: 'A New Beginning',
     note: 'Just setting up this new journal feature. Feels good to get organized and clear my thoughts.',
+    audioUrl: "",
     createdAt: new Date('2025-09-26T09:00:00Z').toISOString(),
   },
   {
     _id: '3',
     title: 'Hackathon Deadline',
+    audioUrl: "",
     note: 'Felt slightly overwhelmed by the hackathon deadline. Took a short break outside. The AI score today was 6/10.',
     createdAt: new Date('2025-09-25T18:30:00Z').toISOString(),
   },
   {
     _id: '2',
     title: 'Productive Day',
+    audioUrl: "",
     note: 'A productive day! Finished the data preprocessing module. Energy levels were high. The AI score was 3/10.',
     createdAt: new Date('2025-09-24T15:00:00Z').toISOString(),
   },
   {
     _id: '1',
     title: 'Sleep Struggles',
+    audioUrl: "",
     note: 'Struggled with sleep. Voice recording felt flat. Need to integrate more linguistic features. AI score 7/10.',
     createdAt: new Date('2025-09-23T23:00:00Z').toISOString(),
   },
@@ -54,25 +60,70 @@ const JournalListPage = () => {
   const [isModalVisible, setModalVisible] = useState(false);
   const [newEntryTitle, setNewEntryTitle] = useState('');
   const [newEntryNote, setNewEntryNote] = useState('');
-  const [journalEntries, setJournalEntries] = useState(initialJournalData);
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleAddNewEntry = () => {
+  const { user, journalEntries, setJournalEntries } = useAuth();
+  const router = useRouter();
+  
+  // --- Fetch initial data on component mount ---
+  useEffect(() => {
+    const loadJournals = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const fetchedEntries = await fetchJournalEntries(user.token);
+
+        // If API returns entries, use them; otherwise, fall back to mock data
+        if (fetchedEntries && fetchedEntries.length > 0) {
+          setJournalEntries(fetchedEntries);
+        } else {
+          setJournalEntries(initialJournalData);
+        }
+
+      } catch (err) {
+        setError('Failed to load journals. Please try again.');
+        setJournalEntries(initialJournalData); // Show mock data on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Only run if the user and token are available
+    if (user?.token) {
+      loadJournals();
+    }
+  }, [user]); // Re-run the effect if the user object changes
+
+  // --- Handle creating a new entry via the modal ---
+  const handleAddNewEntry = async () => {
     if (newEntryTitle.trim().length === 0 || newEntryNote.trim().length === 0) {
       Alert.alert('Incomplete Entry', 'Please provide both a title and a note.');
       return;
     }
-    const newEntry = {
-      _id: Math.random().toString(),
+
+    const entryData = {
       title: newEntryTitle,
       note: newEntryNote,
-      createdAt: new Date().toISOString(),
     };
-    setJournalEntries([newEntry, ...journalEntries]);
-    setNewEntryTitle('');
-    setNewEntryNote('');
-    setModalVisible(false);
-    Alert.alert('Success', 'Journal entry saved!');
+
+    try {
+      // Call service to create the entry in the DB
+      const newEntryFromServer = await createJournalEntry(entryData, user.token);
+
+      // Add the new entry from the server to the top of the list
+      setJournalEntries([newEntryFromServer, ...journalEntries]);
+      
+      // Reset form and close modal
+      setNewEntryTitle('');
+      setNewEntryNote('');
+      setModalVisible(false);
+      Alert.alert('Success', 'Journal entry saved!');
+
+    } catch (err) {
+      console.error("Failed to save new entry:", err);
+      Alert.alert('Error', 'Failed to save your entry. Please try again.');
+    }
   };
 
   const formatDate = (isoString) => {
@@ -92,7 +143,6 @@ const JournalListPage = () => {
     return (
       <TouchableOpacity 
         style={[styles.card, { backgroundColor: cardColor }]}
-        // ✅ THIS IS THE CORRECTED LINE
         onPress={() => router.push(`/Journal/${item._id}`)}
       >
         <Text style={styles.cardTitle}>{item.title}</Text>
@@ -104,13 +154,40 @@ const JournalListPage = () => {
     );
   };
  
+  // --- Helper function to render content based on state ---
+  const renderContent = () => {
+    if (isLoading) {
+      return <ActivityIndicator size="large" color={primaryColor} style={styles.centered} />;
+    }
+
+    if (error) {
+      return <Text style={[styles.centered, styles.errorText]}>{error}</Text>;
+    }
+
+    if (journalEntries.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyIcon}>💡</Text>
+          <Text style={styles.emptyText}>Notes you add appear here</Text>
+        </View>
+      );
+    }
+    
+    return (
+      <FlatList
+        data={journalEntries}
+        renderItem={renderJournalEntry}
+        keyExtractor={(item) => item._id}
+        numColumns={2}
+        contentContainerStyle={styles.gridContainer}
+      />
+    );
+  };
+ 
   return (
     <SafeAreaView style={styles.container}>
-      {/* App Bar */}
       <TopBar title="My Journals"/>
       
-
-      {/* Search Bar */}
       <TouchableOpacity 
         style={styles.searchBar} 
         onPress={() => Alert.alert('Search', 'Search functionality coming soon!')}
@@ -119,30 +196,14 @@ const JournalListPage = () => {
         <Text style={styles.searchText}>Search notes...</Text>
       </TouchableOpacity>
 
-      {/* Journal Entries Grid */}
-      {journalEntries.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>💡</Text>
-          <Text style={styles.emptyText}>Notes you add appear here</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={journalEntries}
-          renderItem={renderJournalEntry}
-          keyExtractor={(item) => item._id}
-          numColumns={2}
-          contentContainerStyle={styles.gridContainer}
-        />
-      )}
+      {renderContent()}
 
-      {/* Floating Action Button */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setModalVisible(true)}>
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
 
-      {/* Add New Entry Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -181,31 +242,18 @@ const JournalListPage = () => {
 // --- Styles ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  appBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0'
-  },
-  appBarTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  iconButton: { padding: 8 },
-  iconText: { fontSize: 22, color: '#5f6368' },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(98, 0, 238, 0.1)',
+  centered: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
-  avatarText: { color: primaryColor, fontWeight: 'bold', fontSize: 16 },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  iconText: { fontSize: 22, color: '#5f6368' },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',

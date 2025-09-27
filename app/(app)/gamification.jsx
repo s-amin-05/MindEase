@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import TopBar from '../components/TopBar';
+import TopBar from '../../components/TopBar';
 
 // --- Mock Data ---
 const initialUserProgress = { level: 1, xp: 0 };
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   achievementIconContainer: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(98, 0, 238, 0.1)' },
   lockedAchievement: { backgroundColor: '#E5E7EB' },
   achievementName: { marginTop: 6, fontSize: 12, color: '#4B5563', textAlign: 'center' },
-  modalContainer: { flex: 1, backgroundColor: 'rgba(17, 24, 39, 0.95)', justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { flex: 1, backgroundColor: 'rgba(17, 24, 39, 1)', justifyContent: 'center', alignItems: 'center' },
   selectionContainer: { alignItems: 'center', padding: 20, width: '100%' },
   modalTitle: { fontSize: 28, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 40 },
   durationButton: { backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingVertical: 16, borderRadius: 12, marginBottom: 20, width: '80%', alignItems: 'center' },

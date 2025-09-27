@@ -10,6 +10,7 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [journalEntries, setJournalEntries] = useState([])
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, initializing }}>
+    <AuthContext.Provider value={{ user, login, logout, initializing, journalEntries, setJournalEntries }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,104 +1,190 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from "react";
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert, // Import Alert
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../../context/AuthContext";
+import { updateJournalEntry } from "../../../services/journalService";
 
-const initialJournalData = [
-  {
-    _id: '4',
-    title: 'A New Beginning',
-    note: 'Just setting up this new journal feature. Feels good to get organized and clear my thoughts.',
-    createdAt: new Date('2025-09-26T09:00:00Z').toISOString(),
-  },
-  {
-    _id: '3',
-    title: 'Hackathon Deadline',
-    note: 'Felt slightly overwhelmed by the hackathon deadline. Took a short break outside. The AI score today was 6/10.',
-    createdAt: new Date('2025-09-25T18:30:00Z').toISOString(),
-  },
-  {
-    _id: '2',
-    title: 'Productive Day',
-    note: 'A productive day! Finished the data preprocessing module. Energy levels were high. The AI score was 3/10.',
-    createdAt: new Date('2025-09-24T15:00:00Z').toISOString(),
-  },
-  {
-    _id: '1',
-    title: 'Sleep Struggles',
-    note: 'Struggled with sleep. Voice recording felt flat. Need to integrate more linguistic features. AI score 7/10.',
-    createdAt: new Date('2025-09-23T23:00:00Z').toISOString(),
-  },
-];
+// 1. Import the new service function
 
-const JournalDetailPage = () => {
+export default function NotePage() {
   const { id } = useLocalSearchParams();
-  const entry = initialJournalData.find((item) => item._id === id);
+  const router = useRouter();
+  
+  // 2. Get the token from your context
+  const { journalEntries, setJournalEntries, user } = useAuth();
+  const userToken = user.token;
 
-  if (!entry) {
+  const journalEntry = journalEntries.find(entry => entry._id === id);
+
+  const [title, setTitle] = useState(journalEntry?.title || "");
+  const [content, setContent] = useState(journalEntry?.note || "");
+  const [audioUrl, setAudioUrl] = useState(journalEntry?.audioUrl || "");
+
+  // 3. Make handleSave async and add the update logic
+  const handleSave = async () => {
+    if (!title.trim() || !content.trim()) {
+      Alert.alert("Missing Info", "Please provide both a title and a note.");
+      return;
+    }
+
+    const updatedData = {
+      title: title,
+      note: content,
+      audioUrl 
+    };
+
+    try {
+      // Call the service to update the entry in the database
+      const updatedEntryFromServer = await updateJournalEntry(journalEntry._id, updatedData, userToken);
+      
+      // Update the global state to reflect the change immediately
+      const updatedEntries = journalEntries.map(entry => 
+        entry._id === journalEntry._id ? updatedEntryFromServer : entry
+      );
+      setJournalEntries(updatedEntries);
+
+      Alert.alert("Success", "Your journal has been updated.");
+      router.back();
+
+    } catch (error) {
+      console.error("Failed to save entry:", error);
+      Alert.alert("Error", "Could not save your changes. Please try again.");
+    }
+  };
+
+  if (!journalEntry) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centered}>
-          <Text style={styles.errorText}>Journal entry not found.</Text>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Journal entry not found.</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const formatDate = (isoString) => {
-    const date = new Date(isoString);
-    return date.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>{entry.title}</Text>
-        <Text style={styles.date}>{formatDate(entry.createdAt)}</Text>
-        <Text style={styles.note}>{entry.note}</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Text style={{ fontSize: 22 }}>⬅️</Text>
+        </TouchableOpacity>
+        <Text style={styles.topTitle}>Edit Note</Text>
+        <View style={{ width: 40 }} />
       </View>
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView contentContainerStyle={styles.container}>
+          <TextInput
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Title"
+            placeholderTextColor="#888"
+            style={styles.titleInput}
+          />
+          <TextInput
+            value={content}
+            onChangeText={setContent}
+            placeholder="Write your note..."
+            placeholderTextColor="#aaa"
+            multiline
+            style={styles.contentInput}
+          />
+        </ScrollView>
+
+        <SafeAreaView style={styles.saveArea}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <Text style={styles.saveText}>💾 Save Changes</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
-};
+}
 
+// ... (Your styles remain exactly the same)
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9F9F9',
+  safeArea: { flex: 1, backgroundColor: "#fefefe" },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
   },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  backButton: { padding: 8 },
+  topTitle: { flex: 1, textAlign: "center", fontSize: 20, fontWeight: "700", color: "#111" },
+  container: { flexGrow: 1, padding: 20 },
+  titleInput: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 16,
+    color: "#111",
+    padding: 12,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 3,
   },
-  errorText: {
+  contentInput: {
     fontSize: 18,
-    color: '#D32F2F',
+    flex: 1,
+    minHeight: 250,
+    textAlignVertical: "top",
+    color: "#333",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 0.5,
+    borderColor: "#ddd",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
   },
-  content: {
-    padding: 20,
+  saveArea: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: "#fefefe",
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
+  saveButton: {
+    backgroundColor: "#4caf50",
+    paddingVertical: 14,
+    borderRadius: 24,
+    alignItems: "center",
+    shadowColor: "#4caf50",
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 5,
   },
-  date: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-  },
-  note: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#444',
+  saveText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 18,
+    letterSpacing: 0.5,
   },
 });
-
-export default JournalDetailPage;

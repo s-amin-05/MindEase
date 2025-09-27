@@ -12,10 +12,8 @@ const menuItems = [
   { name: 'Mood Report', icon: 'stats-chart-outline', route: '/moodanalysis' },
   { name: 'Journal', icon: 'journal', route: '/Journal' },
   { name: 'Settings', icon: 'settings-outline', route: '/profile' },
+  { name: 'My Garden', icon: 'leaf-outline', route: '/gamification' },
   { name: 'About MindEase', icon: 'information-circle-outline', route: '/about' },
-    { name: 'My Garden', icon: 'leaf-outline', route: '/gamification' },
-
-
   
 ];
 
