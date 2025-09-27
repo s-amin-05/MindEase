@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
 
 const primaryColor = '#6200EE';
 
@@ -31,7 +32,8 @@ const ProfilePage = () => {
   const [formName, setFormName] = useState('');
   const [formNumber, setFormNumber] = useState('');
 
-  const user = { name: 'User', email: 'user@example.com' };
+  const {user} = useAuth()
+  
   const streak = 15;
 
   const logout = () => {
@@ -105,10 +107,10 @@ const ProfilePage = () => {
         {/* Profile Info */}
         <View style={styles.profileSection}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user.name.charAt(0)}</Text>
+            <Text style={styles.avatarText}>{user?.name?.charAt(0)}</Text>
           </View>
-          <Text style={styles.profileName}>{user.name}</Text>
-          <Text style={styles.profileEmail}>{user.email}</Text>
+          <Text style={styles.profileName}>{user?.name || "Amin"}</Text>
+          <Text style={styles.profileEmail}>{user?.email}</Text>
         </View>
 
         {/* Streak */}

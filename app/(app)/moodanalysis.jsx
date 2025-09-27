@@ -3,8 +3,8 @@ import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from "react-nati
 import Svg, { Path, Defs, LinearGradient, Stop } from "react-native-svg";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import BottomNavBar from "../components/BottomNavBar";
-import TopBar from "../components/TopBar";
+import BottomNavBar from "../../components/BottomNavBar";
+import TopBar from "../../components/TopBar";
 
 export default function MoodAnalysis() {
   const [trend, setTrend] = useState("7days");
@@ -22,7 +22,7 @@ export default function MoodAnalysis() {
   return (
     <SafeAreaView style={styles.container}>
       <TopBar title="Mood Analysis"/>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, flex: 1 }}>
         {/* Header
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton}>

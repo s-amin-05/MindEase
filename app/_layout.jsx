@@ -1,47 +1,42 @@
-// This is the full, corrected code for app/_layout.jsx
 
-import React, { useContext, useEffect } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router'; // Import Stack
-import { AuthProvider, AuthContext } from '../context/AuthContext';
-import { Text } from 'react-native';
+import { useEffect } from 'react';
+import { useAuth, AuthProvider } from '../context/AuthContext';
+import { useRouter, useSegments } from 'expo-router';
+import { ActivityIndicator, View } from 'react-native';
+import { Slot } from 'expo-router';
 
 const InitialLayout = () => {
-  const { user, loading } = useContext(AuthContext);
-  const router = useRouter();
-  const segments = useSegments();
+    const { user, initializing } = useAuth();
+    const segments = useSegments();
+    const router = useRouter();
 
-  useEffect(() => {
-    if (loading) return;
-    
-    const inAuthGroup = segments[0] === '(auth)';
+    useEffect(() => {
+        if (initializing) return;
 
-    if (user && inAuthGroup) {
-      router.replace('/home');
-    } else if (!user && !inAuthGroup) {
-      router.replace('/(auth)/login');
+        const inAppGroup = segments[0] === '(app)';
+
+        if (user && !inAppGroup) {
+            router.replace('/home');
+        } else if (!user && inAppGroup) {
+            router.replace('/login');
+        }
+    }, [user, initializing, segments]);
+
+    if (initializing) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator />
+            </View>
+        );
     }
-  }, [user, loading, segments]);
 
-  if (loading) {
-    return <Text>Loading...</Text>; // Or a proper loading spinner
-  }
-  return <Slot/>;
-
-//   // ✅ THE FIX IS HERE: We replace <Slot /> with the main <Stack /> navigator
-//   return (
-//     <Stack>
-//       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-//       <Stack.Screen name="Journal" options={{ headerShown: false }} />
-//     </Stack>
-//   );
+    return <Slot />;
 };
 
-const RootLayout = () => {
-  return (
-    <AuthProvider>
-      <InitialLayout />
-    </AuthProvider>
-  );
-};
-
-export default RootLayout;
+export default function RootLayout() {
+    return (
+        <AuthProvider>
+            <InitialLayout />
+        </AuthProvider>
+    );
+}

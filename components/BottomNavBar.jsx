@@ -22,7 +22,7 @@ const BottomNavBar = () => {
         </TouchableOpacity>
 
         {/* Mood Report */}
-        <TouchableOpacity style={styles.sideButton} onPress={() => router.replace('/moodanalysis')}>
+        <TouchableOpacity style={styles.sideButton} onPress={() => router.push('/moodanalysis')}>
           <MaterialCommunityIcons
             name="chart-line-variant" // Icon for reporting/charts
             size={28}
@@ -35,7 +35,7 @@ const BottomNavBar = () => {
       {/* ChatBot Button in middle */}
       <TouchableOpacity
         style={styles.chatBotButton}
-        onPress={() => alert("ChatBot Pressed!")}
+        onPress={() => router.push('/ChatScreen')}
       >
         <Ionicons
           name="chatbubble-ellipses-outline" // Icon for Chat/Bot
