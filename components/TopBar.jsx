@@ -13,6 +13,10 @@ const menuItems = [
   { name: 'Journal', icon: 'journal', route: '/Journal' },
   { name: 'Settings', icon: 'settings-outline', route: '/profile' },
   { name: 'About MindEase', icon: 'information-circle-outline', route: '/about' },
+    { name: 'My Garden', icon: 'leaf-outline', route: '/gamification' },
+
+
+  
 ];
 
 // The 'onProfilePress' prop is no longer needed, so I've removed it.
