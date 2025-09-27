@@ -15,15 +15,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import TopBar from '../../../components/TopBar';
+import { Audio } from 'expo-av';
+import axios from 'axios';
 
-// --- Service and Context Imports ---
-import { fetchJournalEntries, createJournalEntry } from '../../../services/journalService';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext'; // Adjust path if needed
 
-// --- Global Colors & Mock Data ---
+// --- Define your separate API Base URLs ---
+const ANALYSIS_API_URL = 'http://10.245.65.172:8000/'; // Your main server for journals
+const NORMAL_API_URL = process.env.EXPO_PUBLIC_BASE_URL;   // 👈 Your separate ML analysis server
+
+// --- Global Colors ---
 const primaryColor = '#6200EE';
 const accentColor = '#03DAC6';
 
+// --- Mock Data (used as a fallback) ---
 const initialJournalData = [
   {
     _id: '4',
@@ -36,110 +41,161 @@ const initialJournalData = [
     _id: '3',
     title: 'Hackathon Deadline',
     audioUrl: "",
-    note: 'Felt slightly overwhelmed by the hackathon deadline. Took a short break outside. The AI score today was 6/10.',
+    note: 'Felt slightly overwhelmed by the hackathon deadline. Took a short break outside.',
     createdAt: new Date('2025-09-25T18:30:00Z').toISOString(),
-  },
-  {
-    _id: '2',
-    title: 'Productive Day',
-    audioUrl: "",
-    note: 'A productive day! Finished the data preprocessing module. Energy levels were high. The AI score was 3/10.',
-    createdAt: new Date('2025-09-24T15:00:00Z').toISOString(),
-  },
-  {
-    _id: '1',
-    title: 'Sleep Struggles',
-    audioUrl: "",
-    note: 'Struggled with sleep. Voice recording felt flat. Need to integrate more linguistic features. AI score 7/10.',
-    createdAt: new Date('2025-09-23T23:00:00Z').toISOString(),
   },
 ];
 
 
 const JournalListPage = () => {
+  // State for UI and data
   const [isModalVisible, setModalVisible] = useState(false);
   const [newEntryTitle, setNewEntryTitle] = useState('');
   const [newEntryNote, setNewEntryNote] = useState('');
+  
+  // State for loading indicators
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // State for audio recording
+  const [recording, setRecording] = useState(null);
+  const [newAudioUrl, setNewAudioUrl] = useState('');
+  const [analysisReport, setAnalysisReport] = useState(null);
   const [error, setError] = useState(null);
 
+  // Hooks
   const { user, journalEntries, setJournalEntries } = useAuth();
   const router = useRouter();
   
-  // --- Fetch initial data on component mount ---
+  // Fetch initial data on component mount
   useEffect(() => {
     const loadJournals = async () => {
+      if (!user?.token) return;
       try {
         setIsLoading(true);
         setError(null);
-        const fetchedEntries = await fetchJournalEntries(user.token);
+        
+        // --- Direct API call to NORMAL server ---
+        const response = await axios.get(`${NORMAL_API_URL}/api/journals`, {
+          headers: { 'Authorization': `Bearer ${user.token}` },
+        });
+        const fetchedEntries = response.data;
 
-        // If API returns entries, use them; otherwise, fall back to mock data
         if (fetchedEntries && fetchedEntries.length > 0) {
           setJournalEntries(fetchedEntries);
         } else {
           setJournalEntries(initialJournalData);
         }
-
       } catch (err) {
         setError('Failed to load journals. Please try again.');
-        setJournalEntries(initialJournalData); // Show mock data on error
+        setJournalEntries(initialJournalData);
       } finally {
         setIsLoading(false);
       }
     };
+    loadJournals();
+  }, [user]);
 
-    // Only run if the user and token are available
-    if (user?.token) {
-      loadJournals();
-    }
-  }, [user]); // Re-run the effect if the user object changes
-
-  // --- Handle creating a new entry via the modal ---
-  const handleAddNewEntry = async () => {
-    if (newEntryTitle.trim().length === 0 || newEntryNote.trim().length === 0) {
-      Alert.alert('Incomplete Entry', 'Please provide both a title and a note.');
+  // --- Combined 'Save' function for text and/or audio ---
+  const handleCreateNewEntry = async () => {
+    if (!newEntryTitle.trim() && !newEntryNote.trim() && !newAudioUrl) {
+      Alert.alert('Empty Entry', 'Please provide a title, note, or an audio recording.');
       return;
     }
-
-    const entryData = {
-      title: newEntryTitle,
-      note: newEntryNote,
-    };
-
+    setIsProcessing(true);
+    setModalVisible(false);
     try {
-      // Call service to create the entry in the DB
-      const newEntryFromServer = await createJournalEntry(entryData, user.token);
-
-      // Add the new entry from the server to the top of the list
-      setJournalEntries([newEntryFromServer, ...journalEntries]);
+      const entryData = {
+        title: newEntryTitle || (newAudioUrl ? `Audio Journal - ${new Date().toLocaleDateString()}` : 'Untitled'),
+        note: newEntryNote || (newAudioUrl ? 'Audio note captured.' : ''),
+        audioUrl: newAudioUrl,
+        analysis: analysisReport,
+      };
       
-      // Reset form and close modal
+      // --- Direct API call to NORMAL server ---
+      const response = await axios.post(`${NORMAL_API_URL}/api/journals`, entryData, {
+          headers: {
+              'Authorization': `Bearer ${user.token}`,
+              'Content-Type': 'application/json',
+          },
+      });
+      const newJournal = response.data;
+      
+      setJournalEntries([newJournal, ...journalEntries]);
+      Alert.alert('Success', 'Journal entry saved!');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to save your entry.');
+    } finally {
       setNewEntryTitle('');
       setNewEntryNote('');
-      setModalVisible(false);
-      Alert.alert('Success', 'Journal entry saved!');
-
+      setNewAudioUrl('');
+      setAnalysisReport(null);
+      setIsProcessing(false);
+    }
+  };
+  
+  // --- Audio Recording & Analysis Functions ---
+  const startRecording = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission to access microphone is required!');
+        return;
+      }
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      setRecording(recording);
     } catch (err) {
-      console.error("Failed to save new entry:", err);
-      Alert.alert('Error', 'Failed to save your entry. Please try again.');
+      console.error('Failed to start recording', err);
     }
   };
 
+  const stopRecordingAndAnalyze = async () => {
+    if (!recording) return;
+    setIsProcessing(true);
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      if (!uri) { throw new Error("Failed to retrieve recording URI."); }
+      setRecording(null);
+      
+      Alert.alert("Analyzing Audio", "Please wait, this may take a moment...");
+      
+      // --- Direct API call to ANALYSIS server ---
+      const formData = new FormData();
+      formData.append('file', {
+          uri: uri,
+          name: `recording-${Date.now()}.m4a`,
+          type: 'audio/m4a',
+      });
+      const response = await axios.post(`${ANALYSIS_API_URL}/analyze`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const report = response.data;
+      
+      setNewAudioUrl(report.audioUrl);
+      setAnalysisReport(report);
+      if (report.transcript) {
+        setNewEntryNote(report.transcript);
+      }
+      
+      Alert.alert("Analysis Complete", "Your recording has been processed and attached.");
+    } catch (err) {
+      console.error(err.response ? err.response.data : err.message);
+      Alert.alert('Analysis Failed', 'Could not process the audio file.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- Helper and Render Functions ---
   const formatDate = (isoString) => {
     const date = new Date(isoString);
-    return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const renderJournalEntry = ({ item, index }) => {
-    const cardColor = index % 2 === 0 
-        ? 'rgba(76, 175, 80, 0.1)'
-        : 'rgba(98, 0, 238, 0.1)';
-
+    const cardColor = index % 2 === 0 ? 'rgba(76, 175, 80, 0.1)' : 'rgba(98, 0, 238, 0.1)';
     return (
       <TouchableOpacity 
         style={[styles.card, { backgroundColor: cardColor }]}
@@ -147,23 +203,14 @@ const JournalListPage = () => {
       >
         <Text style={styles.cardTitle}>{item.title}</Text>
         <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
-        <Text style={styles.cardNote} numberOfLines={6} ellipsizeMode="tail">
-          {item.note}
-        </Text>
+        <Text style={styles.cardNote} numberOfLines={6} ellipsizeMode="tail">{item.note}</Text>
       </TouchableOpacity>
     );
   };
  
-  // --- Helper function to render content based on state ---
   const renderContent = () => {
-    if (isLoading) {
-      return <ActivityIndicator size="large" color={primaryColor} style={styles.centered} />;
-    }
-
-    if (error) {
-      return <Text style={[styles.centered, styles.errorText]}>{error}</Text>;
-    }
-
+    if (isLoading) return <ActivityIndicator size="large" color={primaryColor} style={styles.centered} />;
+    if (error) return <Text style={[styles.centered, styles.errorText]}>{error}</Text>;
     if (journalEntries.length === 0) {
       return (
         <View style={styles.emptyContainer}>
@@ -172,7 +219,6 @@ const JournalListPage = () => {
         </View>
       );
     }
-    
     return (
       <FlatList
         data={journalEntries}
@@ -188,6 +234,8 @@ const JournalListPage = () => {
     <SafeAreaView style={styles.container}>
       <TopBar title="My Journals"/>
       
+      {isProcessing && <ActivityIndicator size="large" color={primaryColor} style={styles.processingIndicator} />}
+
       <TouchableOpacity 
         style={styles.searchBar} 
         onPress={() => Alert.alert('Search', 'Search functionality coming soon!')}
@@ -200,7 +248,8 @@ const JournalListPage = () => {
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => setModalVisible(true)}>
+        onPress={() => setModalVisible(true)}
+      >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
 
@@ -208,7 +257,8 @@ const JournalListPage = () => {
         animationType="slide"
         transparent={true}
         visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}>
+        onRequestClose={() => setModalVisible(false)}
+      >
         <KeyboardAvoidingView 
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalCenteredView}
@@ -229,9 +279,24 @@ const JournalListPage = () => {
               value={newEntryNote}
               onChangeText={setNewEntryNote}
             />
-            <TouchableOpacity style={styles.saveButton} onPress={handleAddNewEntry}>
-               <Text style={styles.saveButtonText}>💾 Save Entry</Text>
-            </TouchableOpacity>
+            
+            {newAudioUrl ? <Text style={styles.audioAttachedText}>🎤 Audio Attached & Analyzed</Text> : null}
+            <View style={styles.modalActionsContainer}>
+                <TouchableOpacity 
+                    style={styles.audioButton}
+                    disabled={isProcessing}
+                    onPress={recording ? stopRecordingAndAnalyze : startRecording}
+                >
+                    {isProcessing && !recording ? (
+                        <ActivityIndicator color="white" />
+                    ) : (
+                        <Text style={styles.audioButtonIcon}>{recording ? '🛑' : '🎤'}</Text>
+                    )}
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveButton} onPress={handleCreateNewEntry}>
+                   <Text style={styles.saveButtonText}>💾 Save Entry</Text>
+                </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -242,17 +307,8 @@ const JournalListPage = () => {
 // --- Styles ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 16,
-    textAlign: 'center',
-  },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  errorText: { color: 'red', fontSize: 16, textAlign: 'center' },
   iconText: { fontSize: 22, color: '#5f6368' },
   searchBar: {
     flexDirection: 'row',
@@ -275,7 +331,7 @@ const styles = StyleSheet.create({
     aspectRatio: 0.8,
   },
   cardTitle: { fontWeight: 'bold', fontSize: 15, color: '#202124', marginBottom: 4 },
-  cardDate: { fontSize: 11, color: '#5f6368', marginBottom: 8},
+  cardDate: { fontSize: 11, color: '#5f6368', marginBottom: 8 },
   cardNote: { fontSize: 12, color: '#3c4043', lineHeight: 16 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyIcon: { fontSize: 60, color: '#bdc1c6' },
@@ -284,15 +340,25 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 60, 
+    height: 60, 
+    borderRadius: 30,
     backgroundColor: accentColor,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 4,
   },
   fabIcon: { fontSize: 30, color: 'black' },
+  processingIndicator: {
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      zIndex: 10,
+  },
   modalCenteredView: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -319,17 +385,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 12,
   },
+  modalActionsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 15,
+  },
+  audioButton: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: '#007AFF',
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  audioButtonIcon: {
+      fontSize: 24,
+      color: 'white',
+  },
   saveButton: {
     backgroundColor: accentColor,
     borderRadius: 8,
-    paddingVertical: 12,
+    paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 8,
+    flex: 1,
+    marginLeft: 15,
   },
   saveButtonText: {
     color: 'black',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  audioAttachedText: {
+    textAlign: 'center',
+    color: 'green',
+    marginBottom: 10,
+    fontStyle: 'italic',
   },
 });
 

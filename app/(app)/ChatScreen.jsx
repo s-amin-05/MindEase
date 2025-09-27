@@ -15,7 +15,7 @@ import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
 import TopBar from "../../components/TopBar";
 
-const API_URL = "http://10.245.65.172:8000/chat"; // ⚠️ change to your backend IP
+const API_URL = "http://10.78.191.172:8000/chat"; // ⚠️ change to your backend IP
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState([
