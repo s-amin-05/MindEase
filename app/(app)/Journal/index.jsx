@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import TopBar from '../../../components/TopBar';
 
 // --- Global Colors ---
 const primaryColor = '#6200EE';
@@ -92,7 +93,7 @@ const JournalListPage = () => {
       <TouchableOpacity 
         style={[styles.card, { backgroundColor: cardColor }]}
         // ✅ THIS IS THE CORRECTED LINE
-        onPress={() => router.push(`/Journal/1`)}
+        onPress={() => router.push(`/Journal/${item._id}`)}
       >
         <Text style={styles.cardTitle}>{item.title}</Text>
         <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
@@ -106,15 +107,8 @@ const JournalListPage = () => {
   return (
     <SafeAreaView style={styles.container}>
       {/* App Bar */}
-      <View style={styles.appBar}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Text style={styles.iconText}>☰</Text>
-        </TouchableOpacity>
-        <Text style={styles.appBarTitle}>My Journal</Text>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>A</Text>
-        </View>
-      </View>
+      <TopBar title="My Journals"/>
+      
 
       {/* Search Bar */}
       <TouchableOpacity 

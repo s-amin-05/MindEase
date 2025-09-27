@@ -1,6 +1,6 @@
 
-import { Redirect } from 'expo-router';
+import { ActivityIndicator } from 'react-native';
 
-export default function Index() {
-  return <Redirect href="/home" />;
+export default function Page() {
+  return <ActivityIndicator />;
 }
